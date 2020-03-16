@@ -1,9 +1,13 @@
 import os
-from flask import Flask, flash, request, redirect, url_for
+import librosa
+import librosa.display
+import matplotlib.pyplot as plt
+import numpy as np
+from flask import Flask, flash, request, redirect, url_for, render_template
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = 'FS_Test_task_1'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['mp3'])
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -27,11 +31,10 @@ def upload_file():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            print(file.filename)
-            print(filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+            # TODO it is required to load the file directly into RAM
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             return redirect(url_for('uploaded_file',
-                                    filename=file.filename))
+                                    filename=filename))
     return '''
     <!doctype html>
     <title>Upload new File</title>
@@ -46,8 +49,20 @@ from flask import send_from_directory
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return os.path.join(app.config['UPLOAD_FOLDER'], filename)#send_from_directory(app.config['UPLOAD_FOLDER'],
-                               #filename, as_attachment=True)
+    path=os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    # To work load required to install ffmpeg and add the path to it in the system environment variables
+    y, sr = librosa.load(path)
+    D = np.abs(librosa.stft(y))
+    librosa.display.specshow(librosa.amplitude_to_db(D, ref=np.max),
+                            y_axis='log', x_axis='time')
+    plt.title('Power spectrogram')
+    plt.colorbar(format='%+2.0f dB')
+    plt.tight_layout()
+    os.remove(path)
+    filename='static\\result.svg'
+    path=os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    plt.savefig(path)
+    return render_template('result.html')#'<img src={{url_for("static", filename=path)}} alt="альтернативный текст">'
 
 if __name__ == "__main__":
     app.run(debug=True)
