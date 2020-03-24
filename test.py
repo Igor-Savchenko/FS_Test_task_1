@@ -6,7 +6,7 @@ import numpy as np
 from flask import Flask, flash, request, redirect, url_for, render_template
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = 'FS_Test_task_1'
+UPLOAD_FOLDER = ''
 ALLOWED_EXTENSIONS = set(['mp3'])
 
 app = Flask(__name__)
