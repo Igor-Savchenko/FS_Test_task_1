@@ -1,1 +1,6 @@
 ffmpeg
+libsndfile1
+libsndfile-dev
+libav-tools
+libavcodec-extra-53 
+libvpx.so.5
