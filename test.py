@@ -3,14 +3,12 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
-from flask import Flask, flash, request, redirect, url_for, render_template
+from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = ''
 ALLOWED_EXTENSIONS = set(['mp3'])
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -18,6 +16,8 @@ def allowed_file(filename):
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
+    for file_name in os.listdir(app.static_folder):
+            os.remove(os.path.join(app.static_folder, file_name))
     if request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
@@ -30,39 +30,30 @@ def upload_file():
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
+            origin_filename=file.filename
             filename = secure_filename(file.filename)
-            # TODO it is required to load the file directly into RAM
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('uploaded_file',
-                                    filename=filename))
-    return '''
-    <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    '''
+            path=os.path.join(app.static_folder, filename)
+            file.save(path)
+            
+            # To work load required to install ffmpeg and add the path to it in the system environment variables
+            y, sr = librosa.load(path)
+            D = np.abs(librosa.stft(y))
+            librosa.display.specshow(librosa.amplitude_to_db(D, ref=np.max),
+                                    y_axis='log', x_axis='time')
+            plt.title('Power spectrogram')
+            plt.colorbar(format='%+2.0f dB')
+            plt.tight_layout()
+            os.remove(path)
+            output_filename=filename.split('.')[0]+'_spectre.svg'
+            output_path=os.path.join(app.static_folder, output_filename)
+            plt.savefig(output_path)
+            plt.clf()
+            return render_template('result.html', filename=origin_filename, output_filename=output_filename)
 
-from flask import send_from_directory
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    path=os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    # To work load required to install ffmpeg and add the path to it in the system environment variables
-    y, sr = librosa.load(path)
-    D = np.abs(librosa.stft(y))
-    librosa.display.specshow(librosa.amplitude_to_db(D, ref=np.max),
-                            y_axis='log', x_axis='time')
-    plt.title('Power spectrogram')
-    plt.colorbar(format='%+2.0f dB')
-    plt.tight_layout()
-    os.remove(path)
-    filename='static\\result.svg'
-    path=os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    plt.savefig(path)
-    return render_template('result.html')#'<img src={{url_for("static", filename=path)}} alt="альтернативный текст">'
+    return render_template('index.html')
 
 if __name__ == "__main__":
+    app.secret_key = 'super secret key'
     app.run(debug=True)
+        
+    

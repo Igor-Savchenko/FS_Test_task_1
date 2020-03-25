@@ -1,1 +1,7 @@
-<img src="{{ url_for('static', filename='result.svg') }}" />
+{% extends 'base.html' %}
+{% block content %}
+<div class="w3-container">
+    <h1> {{filename}}</h1>
+    <img src="{{ url_for('static', filename=output_filename) }}" />
+</div>
+{% endblock %}
