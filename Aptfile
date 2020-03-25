@@ -1,7 +1,3 @@
 ffmpeg
 libsndfile1
 libsndfile-dev
-libav-tools
-libvpx5
-libpulsedsp
-libpulse0
